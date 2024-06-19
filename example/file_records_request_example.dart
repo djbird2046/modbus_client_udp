@@ -2,14 +2,14 @@ import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 void main() async {
   // Simple modbus logging
   ModbusAppLogger(Level.FINE);
 
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+  var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
 
   // Write two file records
   var r1 = ModbusFileUint16Record(

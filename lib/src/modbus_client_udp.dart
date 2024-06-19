@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:modbus_client/modbus_client.dart';
 import 'package:synchronized/synchronized.dart';
 
-/// The Modbus TCP client class.
-class ModbusClientTcp extends ModbusClient {
+/// The Modbus UDP client class.
+class ModbusClientUdp extends ModbusClient {
   final String serverAddress;
   final int serverPort;
   final Duration connectionTimeout;
@@ -26,52 +26,17 @@ class ModbusClientTcp extends ModbusClient {
     return _lastTransactionId;
   }
 
-  Socket? _socket;
+  RawDatagramSocket? _socket;
   final Lock _lock = Lock();
-  _TcpResponse? _currentResponse;
+  _UdpResponse? _currentResponse;
 
-  ModbusClientTcp(this.serverAddress,
+  ModbusClientUdp(this.serverAddress,
       {this.serverPort = 502,
-      super.connectionMode = ModbusConnectionMode.autoConnectAndKeepConnected,
-      this.connectionTimeout = const Duration(seconds: 3),
-      super.responseTimeout = const Duration(seconds: 3),
-      this.delayAfterConnect,
-      super.unitId});
-
-  /// This is an easy server address discovery.
-  ///
-  /// The discovery starts from the fourth digit of the [startIpAddress] and
-  /// only checks address of fourth digit.
-  /// Example:
-  /// ```dart
-  /// // This checks addresses from '192.168.0.10' to '192.168.0.255'
-  /// var serverAddress = await ModbusClientTcp.discover("192.168.0.10");
-  /// ```
-  static Future<String?> discover(String startIpAddress,
-      {int serverPort = 502,
-      Duration connectionTimeout = const Duration(milliseconds: 10)}) async {
-    var serverAddress = InternetAddress.tryParse(startIpAddress);
-    if (serverAddress == null) {
-      throw ModbusException(
-          context: "ModbusClientTcp.discover",
-          msg: "[$startIpAddress] Invalid address!");
-    }
-    for (var i = serverAddress.rawAddress[3]; i < 256; i++) {
-      var ip = serverAddress!.rawAddress;
-      ip[3] = i;
-      serverAddress = InternetAddress.fromRawAddress(ip);
-      try {
-        var socket = await Socket.connect(serverAddress, serverPort,
-            timeout: connectionTimeout);
-        socket.destroy();
-        ModbusAppLogger.finest(
-            "[${serverAddress.address}] Modbus server found!");
-        return serverAddress.address;
-      } catch (_) {}
-    }
-    ModbusAppLogger.finest("[$startIpAddress] Modbus server not found!");
-    return null;
-  }
+        super.connectionMode = ModbusConnectionMode.autoConnectAndKeepConnected,
+        this.connectionTimeout = const Duration(seconds: 3),
+        super.responseTimeout = const Duration(seconds: 3),
+        this.delayAfterConnect,
+        super.unitId});
 
   @override
   Future<ModbusResponseCode> send(ModbusRequest request) async {
@@ -86,17 +51,13 @@ class ModbusClientTcp extends ModbusClient {
         }
       } catch (ex) {
         ModbusAppLogger.severe(
-            "Unexpected exception in sending TCP message", ex);
+            "Unexpected exception in sending UDP message", ex);
         return ModbusResponseCode.connectionFailed;
       }
 
-      // Flushes any old pending data
-      await _socket!.flush();
-
       // Create the new response handler
       var transactionId = _getNextTransactionId();
-      _currentResponse = _TcpResponse(request,
-          transactionId: transactionId, timeout: getResponseTimeout(request));
+      _currentResponse = _UdpResponse(request, transactionId: transactionId, timeout: getResponseTimeout(request));
 
       // Reset this request in case it was already used before
       request.reset();
@@ -112,7 +73,7 @@ class ModbusClientTcp extends ModbusClient {
       header.setAll(7, request.protocolDataUnit);
 
       // Send the request data
-      _socket!.add(header);
+      _socket!.send(header, InternetAddress(serverAddress), serverPort);
 
       // Wait for the response code
       return await request.responseCode;
@@ -130,16 +91,19 @@ class ModbusClientTcp extends ModbusClient {
     if (isConnected) {
       return true;
     }
-    ModbusAppLogger.fine("Connecting TCP socket...");
+    ModbusAppLogger.fine("Connecting UDP socket...");
     // New connection
     try {
-      _socket = await Socket.connect(serverAddress, serverPort,
-          timeout: connectionTimeout);
+      _socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
       // listen to the received data event stream
-      _socket!.listen((Uint8List data) {
-        _onSocketData(data);
-      },
-          onError: (error) => _onSocketError(error),
+      _socket!.listen((RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          Datagram? datagram = _socket!.receive();
+          if (datagram != null) {
+            _onSocketData(datagram.data);
+          }
+        }
+      }, onError: (error) => _onSocketError(error),
           onDone: () => disconnect(),
           cancelOnError: true);
     } catch (ex) {
@@ -152,35 +116,34 @@ class ModbusClientTcp extends ModbusClient {
     if (delayAfterConnect != null) {
       await Future.delayed(delayAfterConnect!);
     }
-    ModbusAppLogger.fine("TCP socket connected");
+    ModbusAppLogger.fine("UDP socket connected");
     return true;
   }
 
   /// Handle received data from the socket
   void _onSocketData(Uint8List data) {
     // Could receive buffered data before setting up the response object
-    // (https://github.com/cabbi/modbus_client_tcp/issues/6)
     _currentResponse?.addResponseData(data);
   }
 
   /// Handle an error from the socket
   void _onSocketError(dynamic error) {
-    ModbusAppLogger.severe("Unexpected error from TCP socket", error);
+    ModbusAppLogger.severe("Unexpected error from UDP socket", error);
     disconnect();
   }
 
   /// Handle socket being closed
   @override
   Future<void> disconnect() async {
-    ModbusAppLogger.fine("Disconnecting TCP socket...");
+    ModbusAppLogger.fine("Disconnecting UDP socket...");
     if (_socket != null) {
-      _socket!.destroy();
+      _socket!.close();
       _socket = null;
     }
   }
 }
 
-class _TcpResponse {
+class _UdpResponse {
   final ModbusRequest request;
   final int transactionId;
   final Duration timeout;
@@ -189,7 +152,7 @@ class _TcpResponse {
   List<int> _data = Uint8List(0);
   int? _resDataLen;
 
-  _TcpResponse(this.request,
+  _UdpResponse(this.request,
       {required this.timeout, required this.transactionId}) {
     _timeout.future.timeout(timeout, onTimeout: () {
       request.setResponseCode(ModbusResponseCode.requestTimeout);
@@ -203,11 +166,11 @@ class _TcpResponse {
       return;
     }
     _data += data;
-    // Still need the TCP header?
+    // Still need the UDP header?
     if (_resDataLen == null && _data.length >= 6) {
       var resView = ByteData.view(Uint8List.fromList(_data).buffer, 0, 6);
       if (transactionId != resView.getUint16(0)) {
-        ModbusAppLogger.warning("Invalid TCP transaction id",
+        ModbusAppLogger.warning("Invalid UDP transaction id",
             "$transactionId != ${resView.getUint16(0)}");
         _timeout.complete();
         request.setResponseCode(ModbusResponseCode.requestRxFailed);
@@ -215,7 +178,7 @@ class _TcpResponse {
       }
       if (0 != resView.getUint16(2)) {
         ModbusAppLogger.warning(
-            "Invalid TCP protocol id", "${resView.getUint16(2)} != 0");
+            "Invalid UDP protocol id", "${resView.getUint16(2)} != 0");
         _timeout.complete();
         request.setResponseCode(ModbusResponseCode.requestRxFailed);
         return;

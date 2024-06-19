@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 void main() async {
   // Simple modbus logging
@@ -15,7 +15,7 @@ void main() async {
       onUpdate: (self) => print(self));
 
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+  var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
 
   var req1 = bytesRegister.getWriteRequest(Uint8List.fromList(
       [0x01, 0x02, 0x03, 0x04, 0x05, 0x66, 0x07, 0x08, 0x09, 0x0A]));

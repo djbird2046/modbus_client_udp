@@ -1,7 +1,7 @@
-name: modbus_client_tcp
-description: This is the Modbus Client package sending requests to a remote device via TCP/IP connection.
+name: modbus_client_udp
+description: This is the Modbus Client package sending requests to a remote device via UDP/IP connection.
 version: 1.2.1
-repository: https://github.com/cabbi/modbus_client_tcp
+repository: https://github.com/djbird2046/modbus_client_udp
 
 environment:
   sdk: '>=2.17.0 <4.0.0'

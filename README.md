@@ -1,8 +1,12 @@
 # Introduction
-This is a set of three packages implementing Modbus Client sending requests to a remote device (i.e. Modbus Server).
 
-- [Modbus Client](https://pub.dev/packages/modbus_client) is the base implementation for the **TCP** and **Serial** packages.
+Inspired from [Modbus Client TCP](https://pub.dev/packages/modbus_client_tcp) Project
+
+This is a set of four packages implementing Modbus Client sending requests to a remote device (i.e. Modbus Server).
+
+- [Modbus Client](https://pub.dev/packages/modbus_client) is the base implementation for the **TCP/UDP** and **Serial** packages.
 - [Modbus Client TCP](https://pub.dev/packages/modbus_client_tcp) implements the **TCP** protocol to send requests via **ethernet networks**.
+- [Modbus Client UDP](https://pub.dev/packages/modbus_client_udp) implements the **UDP** protocol to send requests via **ethernet networks**.
 - [Modbus Client Serial](https://pub.dev/packages/modbus_client_serial) implements the **ASCII** and **RTU** protocols to send requests via **Serial Port**
 
 The split of the packages is done to minimize dependencies on your project.
@@ -16,9 +20,9 @@ The split of the packages is done to minimize dependencies on your project.
 - **Auto connection mode**: specify how the **send** command behaves by auto connecting and auto disconnecting from the client by setting the [ModbusConnectionMode](https://pub.dev/documentation/modbus_client/latest/modbus_client/ModbusConnectionMode.html)
 - **Unit id**: both the [Modbus Client](https://pub.dev/documentation/modbus_client/latest/modbus_client/ModbusClient-class.html) and the [Request](https://pub.dev/documentation/modbus_client/latest/modbus_client/ModbusElement/getReadRequest.html) can specify the target unit id. This can be useful when using serial clients where more units/devices can be attached to one serial client.
 - **Response timeout**: A timeout waiting the response can be set in the [Modbus Client](https://pub.dev/documentation/modbus_client/latest/modbus_client/ModbusClient-class.html) instance or in the [Request](https://pub.dev/documentation/modbus_client/latest/modbus_client/ModbusElement/getReadRequest.html) itself.
-- **Server discovery** (TCP only): discovers the modbus server from a starting IP address [Modbus Client TCP](https://pub.dev/documentation/modbus_client_tcp/latest/modbus_client_tcp/ModbusClientTcp/discover.html).
-- **Connection timeout** (TCP only): specify a connection timeout for the [Modbus Client TCP](https://pub.dev/documentation/modbus_client_tcp/latest/modbus_client_tcp/ModbusClientTcp-class.html).
-- **Delay after connect** (TCP only): you can apply an optional delay after server connection. In some cases (e.g. Huawei SUN2000 inverter) the server will not respond if requests are sent right after the connection.  
+- **Server discovery** (TCP/UDP only): discovers the modbus server from a starting IP address [Modbus Client TCP](https://pub.dev/documentation/modbus_client_tcp/latest/modbus_client_tcp/ModbusClientTcp/discover.html)/[Modbus Client UDP](https://pub.dev/documentation/modbus_client_udp/latest/modbus_client_udp/ModbusClientUdp/discover.html).
+- **Connection timeout** (TCP/UDP only): specify a connection timeout for the [Modbus Client TCP](https://pub.dev/documentation/modbus_client_udp/latest/modbus_client_udp/ModbusClientUdp-class.html)/[Modbus Client UDP](https://pub.dev/documentation/modbus_client_udp/latest/modbus_client_udp/ModbusClientUdp/discover.html).
+- **Delay after connect** (TCP/UDP only): you can apply an optional delay after server connection. In some cases the server will not respond if requests are sent right after the connection.  
 - **Element types**: this package offers a variety of element types: <a href="#NumericElements">ModbusNumRegister (int16, uint16, int32, uint32)</a>, <a href="#NumericElements">ModbusBitElement</a>, <a href="#EnumElements">ModbusEnumRegister</a>, <a href="#StatusElements">ModbusStatusRegister</a>, <a href="#BitMaskElements">ModbusBitMaskRegister</a>, <a href="#EpochElements">ModbusEpochRegister</a>, <a href="#BytesElements">ModbusBytesRegister</a>.
 - **File records**: support <a href="#FileRecords">File Records</a> function code 0x14 and 0x15 of different types of numeric records <a href="#FileRecordTypes">(int16, uint16, int32, uint32, float and double)</a>.
 - **Group of elements**: in order to optimize request you can create <a href="#ElementGroups">group of elements</a>.
@@ -33,7 +37,7 @@ Using modbus client is simple. You define your elements, create a read or write 
 
 ```dart
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 void main() async {
   // Create a modbus int16 register element
@@ -46,14 +50,14 @@ void main() async {
       onUpdate: (self) => print(self));
 
   // Discover the Modbus server
-  var serverIp = await ModbusClientTcp.discover("192.168.0.0");
+  var serverIp = await ModbusClientUdp.discover("192.168.0.0");
   if (serverIp == null) {
     ModbusAppLogger.shout("No modbus server found!");
     return;
   }
   
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp(serverIp, unitId: 1);
+  var modbusClient = ModbusClientUdp(serverIp, unitId: 1);
 
   // Send a read request from the element
   await modbusClient.send(batteryTemperature.getReadRequest());
@@ -67,7 +71,7 @@ void main() async {
 
 ```dart
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 enum BatteryStatus implements ModbusIntEnum {
   offline(0),
@@ -96,14 +100,14 @@ void main() async {
       onUpdate: (self) => print(self));
 
   // Discover the Modbus server
-  var serverIp = await ModbusClientTcp.discover("192.168.0.0");
+  var serverIp = await ModbusClientUdp.discover("192.168.0.0");
   if (serverIp == null) {
     ModbusAppLogger.shout("No modbus server found!");
     return;
   }
   
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp(serverIp, unitId: 1);
+  var modbusClient = ModbusClientUdp(serverIp, unitId: 1);
 
   var req = batteryStatus.getWriteRequest(BatteryStatus.running);
   var res = await modbusClient.send(req);
@@ -162,7 +166,7 @@ void main() async {
       type: ModbusElementType.holdingRegister,
       enumValues: BatteryStatus.values);
 
-  var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+  var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
   await modbusClient.send(batteryStatus.getReadRequest());
   modbusClient.disconnect();
 }
@@ -285,7 +289,7 @@ var bytesRegister = ModbusBytesRegister(
     onUpdate: (self) => print(self));
 
 // Create the modbus client.
-var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
 
 var req1 = bytesRegister.getWriteRequest(Uint8List.fromList(
     [0x01, 0x02, 0x03, 0x04, 0x05, 0x66, 0x07, 0x08, 0x09, 0x0A]));
@@ -307,7 +311,7 @@ You can use the **ModbusElementsGroup** object as a kind of list of element.
 
 ``` dart
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 enum BatteryStatus implements ModbusIntEnum {
   offline(0),
@@ -351,7 +355,7 @@ void main() async {
   ]);
 
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+  var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
 
   // Send a read request from the group
   await modbusClient.send(batteryRegs.getReadRequest());
@@ -383,14 +387,14 @@ import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 void main() async {
   // Simple modbus logging
   ModbusAppLogger(Level.FINE);
 
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+  var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
 
   // Write two file records
   var r1 = ModbusFileUint16Record(

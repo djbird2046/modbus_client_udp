@@ -3,7 +3,7 @@
 ``` dart
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 void main() async {
   // Simple modbus logging
@@ -19,14 +19,14 @@ void main() async {
       onUpdate: (self) => print(self));
 
   // Discover the Modbus server
-  var serverIp = await ModbusClientTcp.discover("192.168.0.0");
+  var serverIp = await ModbusClientUdp.discover("192.168.0.0");
   if (serverIp == null) {
     ModbusAppLogger.shout("No modbus server found!");
     return;
   }
   
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp(serverIp, unitId: 1);
+  var modbusClient = ModbusClientUdp(serverIp, unitId: 1);
 
   // Send a read request from the element
   await modbusClient.send(batteryTemperature.getReadRequest());
@@ -41,7 +41,7 @@ void main() async {
 ``` dart
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 enum BatteryStatus implements ModbusIntEnum {
   offline(0),
@@ -88,14 +88,14 @@ void main() async {
   ]);
 
   // Discover the Modbus server
-  var serverIp = await ModbusClientTcp.discover("192.168.0.0");
+  var serverIp = await ModbusClientUdp.discover("192.168.0.0");
   if (serverIp == null) {
     ModbusAppLogger.shout("No modbus server found!");
     return;
   }
   
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp(serverIp, unitId: 1);
+  var modbusClient = ModbusClientUdp(serverIp, unitId: 1);
 
   // Send a read request from the group
   await modbusClient.send(batteryRegs.getReadRequest());
@@ -114,7 +114,7 @@ void main() async {
 ``` dart
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 enum BatteryStatus implements ModbusIntEnum {
   offline(0),
@@ -146,14 +146,14 @@ void main() async {
       onUpdate: (self) => print(self));
 
   // Discover the Modbus server
-  var serverIp = await ModbusClientTcp.discover("192.168.0.0");
+  var serverIp = await ModbusClientUdp.discover("192.168.0.0");
   if (serverIp == null) {
     ModbusAppLogger.shout("No modbus server found!");
     return;
   }
   
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp(serverIp, unitId: 1);
+  var modbusClient = ModbusClientUdp(serverIp, unitId: 1);
 
   var req = batteryStatus.getWriteRequest(BatteryStatus.running);
   var res = await modbusClient.send(req);
@@ -170,7 +170,7 @@ import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 void main() async {
   // Simple modbus logging
@@ -183,7 +183,7 @@ void main() async {
       onUpdate: (self) => print(self));
 
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+  var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
 
   var req1 = bytesRegister.getWriteRequest(Uint8List.fromList(
       [0x01, 0x02, 0x03, 0x04, 0x05, 0x66, 0x07, 0x08, 0x09, 0x0A]));
@@ -206,14 +206,14 @@ import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 void main() async {
   // Simple modbus logging
   ModbusAppLogger(Level.FINE);
 
   // Create the modbus client.
-  var modbusClient = ModbusClientTcp("127.0.0.1", unitId: 1);
+  var modbusClient = ModbusClientUdp("127.0.0.1", unitId: 1);
 
   // Write two file records
   var r1 = ModbusFileUint16Record(
@@ -266,7 +266,7 @@ void main() async {
 ```dart
 import 'package:logging/logging.dart';
 import 'package:modbus_client/modbus_client.dart';
-import 'package:modbus_client_tcp/modbus_client_tcp.dart';
+import 'package:modbus_client_udp/modbus_client_udp.dart';
 
 enum BatteryStatus implements ModbusIntEnum {
   offline(0),
@@ -295,14 +295,14 @@ void main() async {
   ModbusAppLogger(Level.INFO);
 
   // Discover the Modbus server
-  var serverIp = await ModbusClientTcp.discover("192.168.0.0");
+  var serverIp = await ModbusClientUdp.discover("192.168.0.0");
   if (serverIp == null) {
     ModbusAppLogger.shout("No modbus server found!");
     return;
   }
   
   // Create the modbus client.
-  var client = ModbusClientTcp(serverIp,
+  var client = ModbusClientUdp(serverIp,
       serverPort: 502,
       unitId: 1,
       responseTimeout: Duration(seconds: 3),

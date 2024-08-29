@@ -1,3 +1,11 @@
+## 1.4.0
+
+- updated reference to new modbus_client 1.4.0
+
+## 1.3.1
+
+- updated reference to new modbus_client 1.3.1 
+
 ## 1.2.1
 - Fix https://github.com/cabbi/modbus_client_tcp/issues/7
 

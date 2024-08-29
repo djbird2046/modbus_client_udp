@@ -1,6 +1,6 @@
 name: modbus_client_udp
 description: This is the Modbus Client package sending requests to a remote device via UDP/IP connection.
-version: 1.2.1
+version: 1.3.1
 repository: https://github.com/djbird2046/modbus_client_udp
 
 environment:
@@ -9,7 +9,7 @@ environment:
 dependencies:
   logging: ^1.2.0
   synchronized: ^3.1.0
-  modbus_client: ^1.2.1
+  modbus_client: ^1.3.1
 
 dev_dependencies:
   lints: ^3.0.0
